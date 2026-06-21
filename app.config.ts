@@ -11,7 +11,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     ...config.ios,
     bundleIdentifier: "co.tapbak.app",
-    supportsTablet: true,
+    supportsTablet: false,
     infoPlist: {
       ...(config.ios?.infoPlist ?? {}),
       // App only uses standard HTTPS (exempt) — avoids the manual
