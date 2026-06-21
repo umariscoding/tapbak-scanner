@@ -4,12 +4,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
+import { Ionicons } from "@expo/vector-icons";
 import { RootStackParamList } from "../navigation/types";
 import { parseScannedId } from "../lib/parseQr";
 import { tick } from "../lib/feedback";
 import { colors, fonts, radius } from "../theme";
 
-type Nav = NativeStackNavigationProp<RootStackParamList, "Scanner">;
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ScannerScreen() {
   const navigation = useNavigation<Nav>();
@@ -73,14 +74,9 @@ export default function ScannerScreen() {
 
       <SafeAreaView style={styles.topBar} edges={["top"]}>
         <Text style={styles.title}>Scan</Text>
-        <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate("Settings")} activeOpacity={0.8}>
-          <Text style={styles.iconBtnText}>Settings</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-
-      <SafeAreaView style={styles.bottomBar} edges={["bottom"]}>
-        <TouchableOpacity style={styles.lookupBtn} onPress={() => navigation.navigate("ManualLookup")} activeOpacity={0.9}>
-          <Text style={styles.lookupBtnText}>Enter email / ID manually</Text>
+        <TouchableOpacity style={styles.manualBtn} onPress={() => navigation.navigate("ManualLookup")} activeOpacity={0.85}>
+          <Ionicons name="create-outline" size={16} color="#fff" />
+          <Text style={styles.manualBtnText}>Manual</Text>
         </TouchableOpacity>
       </SafeAreaView>
     </View>
@@ -99,9 +95,6 @@ const styles = StyleSheet.create({
   hint: { fontFamily: fonts.bodyMedium, color: "#fff", marginTop: 20, fontSize: 15 },
   topBar: { position: "absolute", top: 0, left: 0, right: 0, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 8 },
   title: { fontFamily: fonts.displayBold, color: "#fff", fontSize: 22 },
-  iconBtn: { backgroundColor: "rgba(0,0,0,0.38)", paddingHorizontal: 14, height: 36, justifyContent: "center", borderRadius: radius.sm },
-  iconBtnText: { fontFamily: fonts.bodyMedium, color: "#fff", fontSize: 14 },
-  bottomBar: { position: "absolute", bottom: 0, left: 0, right: 0, padding: 16 },
-  lookupBtn: { backgroundColor: "rgba(255,255,255,0.96)", height: 52, alignItems: "center", justifyContent: "center", borderRadius: radius.md },
-  lookupBtnText: { fontFamily: fonts.bodyBold, color: colors.text, fontSize: 15 },
+  manualBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(0,0,0,0.4)", paddingHorizontal: 14, height: 36, borderRadius: radius.sm },
+  manualBtnText: { fontFamily: fonts.bodyMedium, color: "#fff", fontSize: 14 },
 });

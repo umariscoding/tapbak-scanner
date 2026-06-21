@@ -1,5 +1,24 @@
 import { apiClient } from "./client";
 import { endpoints } from "./endpoints";
+import type { Transaction } from "../types/api";
+
+export interface TransactionList {
+  transactions: Transaction[];
+  total_count: number;
+}
+
+/** GET /pass/transactions — paginated transaction ledger (newest first). */
+export async function getTransactions(
+  params: { search?: string; limit?: number; offset?: number } = {}
+): Promise<TransactionList> {
+  const res = await apiClient.get(endpoints.GET_TRANSACTIONS, {
+    params: { search_query: params.search || "", limit: params.limit ?? 20, offset: params.offset ?? 0 },
+  });
+  return {
+    transactions: (res.data?.transactions ?? []) as Transaction[],
+    total_count: res.data?.total_count ?? 0,
+  };
+}
 
 export interface ProcessTransactionInput {
   customerId: string;

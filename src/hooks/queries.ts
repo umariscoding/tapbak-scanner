@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchCustomer } from "../api/customers";
+import { fetchCustomer, getCustomers } from "../api/customers";
 import { getRewards, redeemReward } from "../api/rewards";
 import {
   processTransaction,
+  getTransactions,
   ProcessTransactionInput,
 } from "../api/transactions";
 
@@ -17,6 +18,20 @@ export function useCustomer(idOrEmail: string | null) {
     queryFn: () => fetchCustomer(idOrEmail as string),
     enabled: !!idOrEmail,
     retry: false,
+  });
+}
+
+export function useCustomerList(search: string) {
+  return useQuery({
+    queryKey: ["customers", search],
+    queryFn: () => getCustomers({ search, limit: 30 }),
+  });
+}
+
+export function useTransactionList() {
+  return useQuery({
+    queryKey: ["transactions"],
+    queryFn: () => getTransactions({ limit: 30 }),
   });
 }
 

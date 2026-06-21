@@ -14,15 +14,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import axios from "axios";
 import { login } from "../api/auth";
-import { getConfig, getCurrentSubscription } from "../api/config";
+import { getConfig } from "../api/config";
 import { useAuthStore } from "../auth/authStore";
 import { colors, fonts } from "../theme";
 
 export default function LoginScreen() {
   const signIn = useAuthStore((s) => s.signIn);
   const setConfig = useAuthStore((s) => s.setConfig);
-  const setSubscription = useAuthStore((s) => s.setSubscription);
-  const setPointsSystem = useAuthStore((s) => s.setPointsSystem);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,14 +35,8 @@ export default function LoginScreen() {
     try {
       const vendor = await login(email.trim(), password);
       await signIn(vendor);
-      // Load config + subscription (subscription carries points_system, like the web).
+      // Load config (provides points_system + total_points for labelling).
       void getConfig().then(setConfig).catch(() => {});
-      void getCurrentSubscription()
-        .then(({ pointsSystem, subscription }) => {
-          setSubscription(subscription);
-          setPointsSystem(pointsSystem);
-        })
-        .catch(() => {});
     } catch (err) {
       let message = "Something went wrong. Please try again.";
       if (axios.isAxiosError(err)) {

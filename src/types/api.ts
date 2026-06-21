@@ -13,9 +13,20 @@ export interface Customer {
   email: string | null;
   contact_number: string | null;
   no_of_rewards: number;
+  total_rewards?: number; // annotated available-reward count in list responses
   device?: "apple" | "google" | null;
   status?: string | null;
   loyalty_card: LoyaltyCard | null;
+}
+
+export interface Transaction {
+  id: string;
+  transaction_type: string;
+  transaction_points: number;
+  transaction_amount: number | string | null;
+  points_remaining?: number | null;
+  created_at: string;
+  customer: Customer | null;
 }
 
 export interface Reward {

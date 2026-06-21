@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import Constants from "expo-constants";
 import { useAuthStore } from "../auth/authStore";
 import { logout } from "../api/auth";
-import { isSubscriptionActive } from "../api/config";
 import { colors, fonts, radius } from "../theme";
 
 function Row({ label, value, last }: { label: string; value: string; last?: boolean }) {
@@ -17,10 +16,8 @@ function Row({ label, value, last }: { label: string; value: string; last?: bool
 
 export default function SettingsScreen() {
   const vendor = useAuthStore((s) => s.vendor);
-  const subscription = useAuthStore((s) => s.subscription);
   const signOut = useAuthStore((s) => s.signOut);
 
-  const active = isSubscriptionActive(subscription);
   const version = Constants.expoConfig?.version ?? "—";
 
   const onLogout = () => {
@@ -42,14 +39,6 @@ export default function SettingsScreen() {
       <View style={styles.card}>
         <Row label="Business" value={vendor?.business_name || "—"} />
         <Row label="Account" value={vendor?.email || "—"} />
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>Subscription</Text>
-          <View style={[styles.badge, active ? styles.badgeGreen : styles.badgeRed]}>
-            <Text style={[styles.badgeText, active ? styles.badgeTextGreen : styles.badgeTextRed]}>
-              {active ? "Active" : "Inactive"}
-            </Text>
-          </View>
-        </View>
         <Row label="Version" value={String(version)} last />
       </View>
 

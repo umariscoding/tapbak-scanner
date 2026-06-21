@@ -3,11 +3,10 @@ import { ActivityIndicator, View, StyleSheet } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useAuthStore } from "../auth/authStore";
 import { RootStackParamList } from "./types";
+import TabNavigator from "./TabNavigator";
 import LoginScreen from "../screens/LoginScreen";
-import ScannerScreen from "../screens/ScannerScreen";
 import CustomerProcessScreen from "../screens/CustomerProcessScreen";
 import ManualLookupScreen from "../screens/ManualLookupScreen";
-import SettingsScreen from "../screens/SettingsScreen";
 import { colors, fonts } from "../theme";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -36,14 +35,13 @@ export default function RootNavigator() {
     >
       {accessToken ? (
         <>
-          <Stack.Screen name="Scanner" component={ScannerScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Main" component={TabNavigator} options={{ headerShown: false }} />
           <Stack.Screen
             name="CustomerProcess"
             component={CustomerProcessScreen}
-            options={{ title: "Process Transaction", headerBackTitle: "Scan" }}
+            options={{ title: "Process Transaction", headerBackTitle: "Back" }}
           />
           <Stack.Screen name="ManualLookup" component={ManualLookupScreen} options={{ title: "Find Customer" }} />
-          <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: "Settings" }} />
         </>
       ) : (
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
