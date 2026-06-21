@@ -10,6 +10,7 @@ import {
   Alert,
 } from "react-native";
 import axios from "axios";
+import Toast from "react-native-toast-message";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/types";
 import { useCustomer, useRewards, useProcessTransaction, useRedeemReward } from "../hooks/queries";
@@ -65,6 +66,7 @@ export default function CustomerProcessScreen() {
       Alert.alert("Customer inactive", "This customer's account is inactive.");
       return;
     }
+    const addedCount = points;
     try {
       await processMutation.mutateAsync({
         customerId,
@@ -74,9 +76,14 @@ export default function CustomerProcessScreen() {
       hapticSuccess();
       setAmount("");
       setPoints("");
+      Toast.show({
+        type: "success",
+        text1: "Transaction processed",
+        text2: `Added ${addedCount} ${unit} for ${customer?.name || "customer"}`,
+      });
     } catch {
       hapticError();
-      Alert.alert("Couldn't process", "The transaction failed. Please try again.");
+      Toast.show({ type: "error", text1: "Couldn't process", text2: "Please try again." });
     }
   };
 
@@ -89,9 +96,10 @@ export default function CustomerProcessScreen() {
           try {
             await redeemMutation.mutateAsync(reward.id);
             hapticSuccess();
+            Toast.show({ type: "success", text1: "Reward redeemed" });
           } catch {
             hapticError();
-            Alert.alert("Couldn't redeem", "Please try again.");
+            Toast.show({ type: "error", text1: "Couldn't redeem", text2: "Please try again." });
           }
         },
       },

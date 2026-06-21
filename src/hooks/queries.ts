@@ -48,6 +48,10 @@ function useInvalidateCustomer() {
   return (customerId: string) => {
     void qc.invalidateQueries({ queryKey: qk.customer(customerId) });
     void qc.invalidateQueries({ queryKey: qk.rewards(customerId) });
+    // Also refresh the Customers + Activity lists so they reflect the change
+    // without needing to reopen the app.
+    void qc.invalidateQueries({ queryKey: ["customers"] });
+    void qc.invalidateQueries({ queryKey: ["transactions"] });
   };
 }
 

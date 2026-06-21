@@ -15,6 +15,7 @@ import {
   Roboto_500Medium,
   Roboto_700Bold,
 } from "@expo-google-fonts/roboto";
+import Toast from "react-native-toast-message";
 import RootNavigator from "./src/navigation/RootNavigator";
 import { useAuthStore } from "./src/auth/authStore";
 import { colors } from "./src/theme";
@@ -56,6 +57,7 @@ export default function App() {
           <StatusBar style="dark" />
           <RootNavigator />
         </NavigationContainer>
+        <Toast />
       </SafeAreaProvider>
     </QueryClientProvider>
   );
