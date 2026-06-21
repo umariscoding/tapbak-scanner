@@ -37,8 +37,7 @@ export default function CustomerProcessScreen() {
   const { idOrEmail } = route.params;
 
   const config = useAuthStore((s) => s.config);
-  const storePointsSystem = useAuthStore((s) => s.pointsSystem);
-  const pointsSystem: PointsSystem = storePointsSystem ?? config?.points_system ?? "stamps";
+  const pointsSystem: PointsSystem = config?.points_system ?? "stamps";
   const unit = pointsSystem === "points" ? "points" : "stamps";
   const unitLabel = pointsSystem === "points" ? "Points" : "Stamps";
 

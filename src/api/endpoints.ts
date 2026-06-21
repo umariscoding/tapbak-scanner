@@ -5,7 +5,6 @@ export const endpoints = {
   LOGIN: "/pass/login",
   LOGOUT: "/pass/logout",
   GET_CONFIG: "/pass/config",
-  GET_CURRENT_SUBSCRIPTION: "/pass/current-subscription",
   GET_CUSTOMERS: "/pass/customers",
   GET_TRANSACTIONS: "/pass/transactions",
   FETCH_CUSTOMER: (idOrEmail: string) => `/pass/customers/${idOrEmail}`,

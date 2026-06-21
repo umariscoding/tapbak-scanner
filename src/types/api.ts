@@ -60,9 +60,3 @@ export interface Vendor {
   access_token: string;
   refresh_token: string;
 }
-
-export interface Subscription {
-  status?: string;
-  active?: boolean;
-  [key: string]: unknown;
-}
