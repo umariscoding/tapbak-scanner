@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { secureStorage } from "./secureStorage";
-import type { Vendor, Configuration, Subscription } from "../types/api";
+import type { Vendor, Configuration, Subscription, PointsSystem } from "../types/api";
 
 interface AuthState {
   hydrated: boolean;
@@ -9,12 +9,14 @@ interface AuthState {
   vendor: Vendor | null;
   config: Configuration | null;
   subscription: Subscription | null;
+  pointsSystem: PointsSystem | null;
 
   hydrate: () => Promise<void>;
   signIn: (vendor: Vendor) => Promise<void>;
   setAccessToken: (token: string) => void;
   setConfig: (config: Configuration | null) => void;
   setSubscription: (subscription: Subscription | null) => void;
+  setPointsSystem: (pointsSystem: PointsSystem | null) => void;
   signOut: () => Promise<void>;
 }
 
@@ -25,6 +27,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   vendor: null,
   config: null,
   subscription: null,
+  pointsSystem: null,
 
   async hydrate() {
     const [accessToken, refreshToken, vendorRaw] = await Promise.all([
@@ -70,6 +73,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ subscription });
   },
 
+  setPointsSystem(pointsSystem) {
+    set({ pointsSystem });
+  },
+
   async signOut() {
     await secureStorage.clear();
     set({
@@ -78,6 +85,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       vendor: null,
       config: null,
       subscription: null,
+      pointsSystem: null,
     });
   },
 }));

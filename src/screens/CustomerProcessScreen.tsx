@@ -14,14 +14,22 @@ import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/types";
 import { useCustomer, useRewards, useProcessTransaction, useRedeemReward } from "../hooks/queries";
 import { useAuthStore } from "../auth/authStore";
-import { isSubscriptionActive } from "../api/config";
 import { success as hapticSuccess, error as hapticError } from "../lib/feedback";
-import ProgressBar from "../components/ProgressBar";
-import SubscriptionBanner from "../components/SubscriptionBanner";
-import { colors } from "../theme";
-import type { PointsSystem } from "../types/api";
+import { colors, fonts, radius } from "../theme";
+import type { PointsSystem, Reward } from "../types/api";
 
 type R = RouteProp<RootStackParamList, "CustomerProcess">;
+
+function relativeDate(iso?: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (days <= 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 30) return `${days} days ago`;
+  return d.toLocaleDateString();
+}
 
 export default function CustomerProcessScreen() {
   const route = useRoute<R>();
@@ -29,17 +37,15 @@ export default function CustomerProcessScreen() {
   const { idOrEmail } = route.params;
 
   const config = useAuthStore((s) => s.config);
-  const subscription = useAuthStore((s) => s.subscription);
-  const subscriptionActive = isSubscriptionActive(subscription);
-
-  const pointsSystem: PointsSystem = config?.points_system ?? "stamps";
-  const isStamps = pointsSystem === "stamps";
-  const label = isStamps ? "stamps" : "points";
-  const totalPoints = config?.total_points ?? 0;
+  const storePointsSystem = useAuthStore((s) => s.pointsSystem);
+  const pointsSystem: PointsSystem = storePointsSystem ?? config?.points_system ?? "stamps";
+  const unit = pointsSystem === "points" ? "points" : "stamps";
+  const unitLabel = pointsSystem === "points" ? "Points" : "Stamps";
 
   const customerQ = useCustomer(idOrEmail);
   const customer = customerQ.data;
   const customerId = customer?.id ?? null;
+  const isInactiveCustomer = customer?.status === "inactive";
 
   const rewardsQ = useRewards(customerId);
   const rewards = rewardsQ.data ?? [];
@@ -48,37 +54,41 @@ export default function CustomerProcessScreen() {
   const redeemMutation = useRedeemReward(customerId ?? "");
 
   const [amount, setAmount] = useState("");
-  const [pointsToAdd, setPointsToAdd] = useState("");
+  const [points, setPoints] = useState("");
 
   const busy = processMutation.isPending || redeemMutation.isPending;
+  const balance = customer?.loyalty_card?.loyalty_points ?? 0;
+  const canProcess = !!amount && !!points && !isInactiveCustomer && !busy;
 
-  const addTransaction = async (points: number, txnAmount: number) => {
-    if (!customerId || points <= 0) return;
+  const onProcess = async () => {
+    if (!customerId || !amount || !points) return;
+    if (isInactiveCustomer) {
+      Alert.alert("Customer inactive", "This customer's account is inactive.");
+      return;
+    }
     try {
       await processMutation.mutateAsync({
         customerId,
-        transactionType: pointsSystem,
-        transactionAmount: txnAmount,
+        transactionAmount: amount,
         transactionPoints: points,
       });
       hapticSuccess();
       setAmount("");
-      setPointsToAdd("");
-    } catch (err) {
+      setPoints("");
+    } catch {
       hapticError();
-      Alert.alert("Couldn't add", "The transaction failed. Please try again.");
+      Alert.alert("Couldn't process", "The transaction failed. Please try again.");
     }
   };
 
-  const onRedeem = (rewardId: string) => {
+  const onRedeem = (reward: Reward) => {
     Alert.alert("Redeem reward", "Mark this reward as redeemed?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Redeem",
-        style: "default",
         onPress: async () => {
           try {
-            await redeemMutation.mutateAsync(rewardId);
+            await redeemMutation.mutateAsync(reward.id);
             hapticSuccess();
           } catch {
             hapticError();
@@ -91,9 +101,7 @@ export default function CustomerProcessScreen() {
 
   const errorView = useMemo(() => {
     if (!customerQ.isError) return null;
-    const status = axios.isAxiosError(customerQ.error)
-      ? customerQ.error.response?.status
-      : undefined;
+    const status = axios.isAxiosError(customerQ.error) ? customerQ.error.response?.status : undefined;
     const message =
       status === 404
         ? "No active card found. The customer may not have added their pass to Wallet yet, or the code is invalid."
@@ -101,8 +109,8 @@ export default function CustomerProcessScreen() {
     return (
       <View style={styles.center}>
         <Text style={styles.errorText}>{message}</Text>
-        <TouchableOpacity style={styles.secondaryBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.secondaryBtnText}>Back to scanner</Text>
+        <TouchableOpacity style={styles.ghostBtn} onPress={() => navigation.goBack()}>
+          <Text style={styles.ghostBtnText}>Back to scanner</Text>
         </TouchableOpacity>
       </View>
     );
@@ -115,183 +123,182 @@ export default function CustomerProcessScreen() {
       </View>
     );
   }
-
   if (errorView) return errorView;
   if (!customer) return null;
 
-  const balance = customer.loyalty_card?.loyalty_points ?? 0;
+  const initial = (customer.name || customer.email || "?").charAt(0).toUpperCase();
 
   return (
-    <ScrollView style={styles.fill} contentContainerStyle={styles.content}>
-      {!subscriptionActive && <SubscriptionBanner />}
+    <ScrollView style={styles.fill} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <Text style={styles.subtitle}>Process payments and manage loyalty {unit} for your customers</Text>
 
+      {/* Inputs */}
       <View style={styles.card}>
-        <Text style={styles.name}>{customer.name || "Customer"}</Text>
-        {!!customer.email && <Text style={styles.email}>{customer.email}</Text>}
-        <View style={styles.progressWrap}>
-          <ProgressBar value={balance} total={totalPoints} label={label} />
+        <View style={styles.inputRow}>
+          <View style={styles.inputCol}>
+            <Text style={styles.inputLabel}>Payment amount</Text>
+            <View style={styles.inputWrap}>
+              <Text style={styles.inputPrefix}>£</Text>
+              <TextInput
+                style={styles.input}
+                value={amount}
+                onChangeText={setAmount}
+                keyboardType="decimal-pad"
+                placeholder="0.00"
+                placeholderTextColor={colors.textFaint}
+                editable={!busy}
+              />
+            </View>
+            <Text style={styles.help}>Enter the total payment amount</Text>
+          </View>
+
+          <View style={styles.inputCol}>
+            <Text style={styles.inputLabel}>{unitLabel}</Text>
+            <View style={styles.inputWrap}>
+              <TextInput
+                style={[styles.input, { paddingLeft: 14 }]}
+                value={points}
+                onChangeText={setPoints}
+                keyboardType="number-pad"
+                placeholder="0"
+                placeholderTextColor={colors.textFaint}
+                editable={!busy}
+              />
+            </View>
+            <Text style={styles.help}>Customer has {balance} {unit} available</Text>
+          </View>
         </View>
       </View>
 
-      {/* Add stamps / points */}
+      {/* Customer */}
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>
-          Add {isStamps ? "stamps" : "points"}
-        </Text>
-
-        {isStamps ? (
-          <View style={styles.quickRow}>
-            {[1, 2, 5].map((n) => (
-              <TouchableOpacity
-                key={n}
-                style={[styles.quickBtn, (!subscriptionActive || busy) && styles.disabled]}
-                disabled={!subscriptionActive || busy}
-                onPress={() => addTransaction(n, 0)}
-              >
-                <Text style={styles.quickBtnText}>+{n}</Text>
-              </TouchableOpacity>
-            ))}
+        <View style={styles.customerRow}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initial}</Text>
           </View>
-        ) : (
-          <View style={styles.pointsForm}>
-            <Text style={styles.label}>Purchase amount</Text>
-            <TextInput
-              style={styles.input}
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="decimal-pad"
-              placeholder="0.00"
-              placeholderTextColor={colors.textMuted}
-              editable={subscriptionActive && !busy}
-            />
-            <Text style={styles.label}>Points to add</Text>
-            <TextInput
-              style={styles.input}
-              value={pointsToAdd}
-              onChangeText={setPointsToAdd}
-              keyboardType="number-pad"
-              placeholder="0"
-              placeholderTextColor={colors.textMuted}
-              editable={subscriptionActive && !busy}
-            />
-            <TouchableOpacity
-              style={[styles.primaryBtn, (!subscriptionActive || busy) && styles.disabled]}
-              disabled={!subscriptionActive || busy}
-              onPress={() =>
-                addTransaction(
-                  parseInt(pointsToAdd || "0", 10),
-                  parseFloat(amount || "0")
-                )
-              }
-            >
-              {busy ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.primaryBtnText}>Add points</Text>
-              )}
-            </TouchableOpacity>
+          <View style={styles.flex}>
+            <Text style={styles.name} numberOfLines={1}>{customer.name || "Customer"}</Text>
+            {!!customer.email && <Text style={styles.email} numberOfLines={1}>{customer.email}</Text>}
+            <View style={[styles.badge, isInactiveCustomer ? styles.badgeRed : styles.badgeGreen]}>
+              <Text style={[styles.badgeText, isInactiveCustomer ? styles.badgeTextRed : styles.badgeTextGreen]}>
+                {isInactiveCustomer ? "Inactive" : "Active"}
+              </Text>
+            </View>
           </View>
-        )}
+          <View style={styles.balanceBox}>
+            <Text style={styles.balanceLabel}>{unitLabel}</Text>
+            <Text style={styles.balanceValue}>{balance}</Text>
+          </View>
+        </View>
       </View>
 
       {/* Rewards */}
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>
-          Available rewards{rewards.length ? ` (${rewards.length})` : ""}
-        </Text>
-        {rewardsQ.isLoading ? (
-          <ActivityIndicator color={colors.primary} />
-        ) : rewards.length === 0 ? (
-          <Text style={styles.muted}>No rewards to redeem.</Text>
-        ) : (
-          rewards.map((r) => (
-            <View key={r.id} style={styles.rewardRow}>
-              <Text style={styles.rewardText}>🎁 Reward ready</Text>
-              <TouchableOpacity
-                style={[styles.redeemBtn, (!subscriptionActive || busy) && styles.disabled]}
-                disabled={!subscriptionActive || busy}
-                onPress={() => onRedeem(r.id)}
-              >
-                <Text style={styles.redeemBtnText}>Redeem</Text>
-              </TouchableOpacity>
+        <View style={styles.rewardHeader}>
+          <Text style={styles.sectionTitle}>Available rewards</Text>
+          {rewards.length > 0 && (
+            <View style={styles.countPill}>
+              <Text style={styles.countPillText}>{rewards.length}</Text>
             </View>
-          ))
+          )}
+        </View>
+        {rewardsQ.isLoading ? (
+          <ActivityIndicator color={colors.primary} style={{ marginVertical: 12 }} />
+        ) : rewards.length === 0 ? (
+          <Text style={styles.empty}>No rewards available at the moment</Text>
+        ) : (
+          <View style={{ gap: 10, marginTop: 4 }}>
+            {rewards.map((r) => (
+              <View key={r.id} style={styles.rewardItem}>
+                <View style={styles.flex}>
+                  <Text style={styles.rewardTitle}>Reward #{r.id.slice(-8)}</Text>
+                  <Text style={styles.rewardMeta}>Ready to redeem · {relativeDate(r.created_at)}</Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.redeemBtn, busy && styles.disabled]}
+                  disabled={busy}
+                  onPress={() => onRedeem(r)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.redeemBtnText}>Redeem</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
         )}
       </View>
 
-      <TouchableOpacity style={styles.secondaryBtn} onPress={() => navigation.goBack()}>
-        <Text style={styles.secondaryBtnText}>Done — scan next</Text>
+      {/* Process */}
+      <TouchableOpacity style={[styles.primaryBtn, !canProcess && styles.disabled]} disabled={!canProcess} onPress={onProcess} activeOpacity={0.9}>
+        {processMutation.isPending ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.primaryBtnText}>Process payment</Text>
+        )}
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.ghostBtn} onPress={() => navigation.goBack()}>
+        <Text style={styles.ghostBtnText}>Scan next customer</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: "#F3F4F6" },
-  content: { padding: 16, gap: 12, paddingBottom: 40 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 16, backgroundColor: "#F3F4F6" },
+  fill: { flex: 1, backgroundColor: colors.page },
+  content: { padding: 16, gap: 14, paddingBottom: 40 },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 16, backgroundColor: colors.page },
+  flex: { flex: 1 },
+  subtitle: { fontFamily: fonts.body, fontSize: 13, color: colors.textMuted, marginTop: 2 },
+
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: 16,
-    gap: 8,
   },
-  name: { fontSize: 22, fontWeight: "800", color: colors.text },
-  email: { fontSize: 14, color: colors.textMuted },
-  progressWrap: { marginTop: 12 },
-  sectionTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginBottom: 4 },
-  quickRow: { flexDirection: "row", gap: 12 },
-  quickBtn: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    paddingVertical: 22,
-    borderRadius: 14,
-    alignItems: "center",
-  },
-  quickBtnText: { color: "#fff", fontSize: 24, fontWeight: "800" },
-  pointsForm: { gap: 6 },
-  label: { fontSize: 13, color: colors.textMuted, marginTop: 8 },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    fontSize: 18,
-    color: colors.text,
-  },
-  primaryBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: "center",
-    marginTop: 14,
-  },
-  primaryBtnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+
+  inputRow: { flexDirection: "row", gap: 12 },
+  inputCol: { flex: 1, gap: 6 },
+  inputLabel: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.text },
+  inputWrap: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface },
+  inputPrefix: { fontFamily: fonts.bodyMedium, fontSize: 16, color: colors.textMuted, paddingLeft: 12 },
+  input: { flex: 1, height: 48, paddingHorizontal: 8, fontFamily: fonts.body, fontSize: 17, color: colors.text },
+  help: { fontFamily: fonts.body, fontSize: 11.5, color: colors.textFaint },
+
+  customerRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  avatar: { width: 48, height: 48, borderRadius: radius.pill, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" },
+  avatarText: { fontFamily: fonts.displayBold, fontSize: 20, color: colors.primary },
+  name: { fontFamily: fonts.display, fontSize: 17, color: colors.text },
+  email: { fontFamily: fonts.body, fontSize: 13, color: colors.textMuted, marginTop: 1 },
+  badge: { alignSelf: "flex-start", paddingHorizontal: 9, paddingVertical: 2, borderRadius: radius.pill, marginTop: 6 },
+  badgeGreen: { backgroundColor: colors.successBg },
+  badgeRed: { backgroundColor: colors.dangerBg },
+  badgeText: { fontFamily: fonts.bodyMedium, fontSize: 11 },
+  badgeTextGreen: { color: colors.successText },
+  badgeTextRed: { color: colors.danger },
+  balanceBox: { backgroundColor: colors.infoBg, borderRadius: radius.md, paddingVertical: 10, paddingHorizontal: 16, alignItems: "center", minWidth: 76 },
+  balanceLabel: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.primary },
+  balanceValue: { fontFamily: fonts.displayBold, fontSize: 24, color: colors.primary },
+
+  rewardHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  sectionTitle: { fontFamily: fonts.display, fontSize: 15, color: colors.text },
+  countPill: { backgroundColor: colors.info, borderRadius: radius.pill, minWidth: 20, height: 20, paddingHorizontal: 6, alignItems: "center", justifyContent: "center" },
+  countPillText: { fontFamily: fonts.bodyBold, fontSize: 11, color: "#fff" },
+  empty: { fontFamily: fonts.body, fontSize: 13, color: colors.textFaint, marginTop: 8 },
+  rewardItem: { flexDirection: "row", alignItems: "center", backgroundColor: colors.infoBg, borderRadius: radius.md, padding: 12, gap: 10 },
+  rewardTitle: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.text },
+  rewardMeta: { fontFamily: fonts.body, fontSize: 12, color: colors.textMuted, marginTop: 1 },
+  redeemBtn: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 9, borderRadius: radius.sm },
+  redeemBtnText: { fontFamily: fonts.bodyBold, fontSize: 13, color: "#fff" },
+
+  primaryBtn: { backgroundColor: colors.primary, borderRadius: radius.md, height: 52, alignItems: "center", justifyContent: "center", marginTop: 2 },
+  primaryBtnText: { fontFamily: fonts.bodyBold, fontSize: 16, color: "#fff" },
   disabled: { opacity: 0.4 },
-  muted: { color: colors.textMuted },
-  errorText: { color: colors.text, fontSize: 16, textAlign: "center", lineHeight: 22 },
-  rewardRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-  },
-  rewardText: { fontSize: 15, color: colors.text, fontWeight: "600" },
-  redeemBtn: {
-    backgroundColor: colors.success,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  redeemBtnText: { color: "#fff", fontWeight: "700" },
-  secondaryBtn: {
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  secondaryBtnText: { color: colors.text, fontWeight: "700", fontSize: 16 },
+
+  ghostBtn: { alignItems: "center", justifyContent: "center", height: 44 },
+  ghostBtnText: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.textMuted },
+
+  errorText: { fontFamily: fonts.body, fontSize: 15, color: colors.text, textAlign: "center", lineHeight: 22 },
 });

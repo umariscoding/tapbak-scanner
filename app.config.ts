@@ -4,20 +4,28 @@ import { ExpoConfig, ConfigContext } from "expo/config";
 // environment-specific values (API base URL) and native config plugins.
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: "Tapbak Scanner",
-  slug: "tapbak-scanner",
-  scheme: "tapbakscanner",
+  name: "tapbak",
+  slug: "tapbak-app",
+  owner: "tapbak",
+  scheme: "tapbakapp",
   ios: {
     ...config.ios,
-    bundleIdentifier: "co.tapbak.scanner",
+    bundleIdentifier: "co.tapbak.app",
     supportsTablet: true,
+    infoPlist: {
+      ...(config.ios?.infoPlist ?? {}),
+      // App only uses standard HTTPS (exempt) — avoids the manual
+      // export-compliance question on every TestFlight build.
+      ITSAppUsesNonExemptEncryption: false,
+    },
   },
   android: {
     ...config.android,
-    package: "co.tapbak.scanner",
+    package: "co.tapbak.app",
   },
   plugins: [
     "expo-secure-store",
+    "expo-font",
     [
       "expo-camera",
       {
@@ -31,8 +39,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ...(config.extra ?? {}),
     apiBaseUrl: process.env.API_BASE_URL ?? "https://api.tapbak.co",
     eas: {
-      // projectId is filled in by `eas init`; left blank for local dev.
-      projectId: process.env.EAS_PROJECT_ID ?? undefined,
+      projectId: "d0586884-2af4-4b93-a7eb-0511d7001283",
     },
   },
 });

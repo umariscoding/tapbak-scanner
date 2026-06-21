@@ -12,7 +12,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
 import { parseScannedId } from "../lib/parseQr";
-import { colors } from "../theme";
+import { colors, fonts, radius } from "../theme";
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "ManualLookup">;
 
@@ -23,16 +23,12 @@ export default function ManualLookupScreen() {
   const onFind = () => {
     const trimmed = value.trim();
     if (!trimmed) return;
-    // Accept an email as-is, or parse a pasted URL/QR payload into an id.
     const idOrEmail = trimmed.includes("@") ? trimmed : parseScannedId(trimmed) ?? trimmed;
     navigation.replace("CustomerProcess", { idOrEmail });
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={styles.fill}
-    >
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.fill}>
       <View style={styles.container}>
         <Text style={styles.label}>Customer email or card ID</Text>
         <TextInput
@@ -43,14 +39,12 @@ export default function ManualLookupScreen() {
           autoCorrect={false}
           keyboardType="email-address"
           placeholder="you@example.com"
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={colors.textFaint}
           autoFocus
           onSubmitEditing={onFind}
         />
-        <Text style={styles.hint}>
-          Use this when a QR won't scan. Phone-number lookup isn't supported.
-        </Text>
-        <TouchableOpacity style={styles.button} onPress={onFind}>
+        <Text style={styles.hint}>Use this when a QR won't scan.</Text>
+        <TouchableOpacity style={styles.button} onPress={onFind} activeOpacity={0.9}>
           <Text style={styles.buttonText}>Find customer</Text>
         </TouchableOpacity>
       </View>
@@ -59,25 +53,21 @@ export default function ManualLookupScreen() {
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: "#fff" },
-  container: { padding: 20, gap: 8 },
-  label: { fontSize: 13, color: colors.textMuted, marginTop: 8 },
+  fill: { flex: 1, backgroundColor: colors.page },
+  container: { padding: 16, gap: 8 },
+  label: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.text, marginTop: 8 },
   input: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
+    borderRadius: radius.md,
     paddingHorizontal: 14,
-    paddingVertical: 14,
+    height: 50,
+    fontFamily: fonts.body,
     fontSize: 16,
     color: colors.text,
+    backgroundColor: colors.surface,
   },
-  hint: { fontSize: 13, color: colors.textMuted },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: "center",
-    marginTop: 16,
-  },
-  buttonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  hint: { fontFamily: fonts.body, fontSize: 12.5, color: colors.textFaint },
+  button: { backgroundColor: colors.primary, borderRadius: radius.md, height: 50, alignItems: "center", justifyContent: "center", marginTop: 14 },
+  buttonText: { fontFamily: fonts.bodyBold, color: "#fff", fontSize: 16 },
 });

@@ -1,25 +1,25 @@
 import { apiClient } from "./client";
 import { endpoints } from "./endpoints";
-import type { PointsSystem } from "../types/api";
 
 export interface ProcessTransactionInput {
   customerId: string;
-  transactionType: PointsSystem;
-  transactionAmount: number;
-  transactionPoints: number;
+  /** Raw string from the "Payment amount" input — sent verbatim, like the web. */
+  transactionAmount: string;
+  /** Raw string from the points/stamps input — sent verbatim, like the web. */
+  transactionPoints: string;
 }
 
 /**
- * Adds stamps/points. NOT idempotent — each call creates a Transaction and may
- * mint rewards. Returns only a message; callers must refetch the customer and
- * rewards to reflect the new balance.
+ * POST /pass/process-transaction.
+ * Byte-for-byte identical to the web (Tapbak/src/states/app.js processTransaction +
+ * ProcessTransaction/index.jsx): transaction_type is the literal "points" (the web
+ * hardcodes it), and amount/points are the raw input strings (not parsed).
+ * NOT idempotent — callers must refetch the customer + rewards afterwards.
  */
-export async function processTransaction(
-  input: ProcessTransactionInput
-): Promise<void> {
+export async function processTransaction(input: ProcessTransactionInput): Promise<void> {
   await apiClient.post(endpoints.PROCESS_TRANSACTION, {
     customer_id: input.customerId,
-    transaction_type: input.transactionType,
+    transaction_type: "points",
     transaction_amount: input.transactionAmount,
     transaction_points: input.transactionPoints,
   });

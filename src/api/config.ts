@@ -1,26 +1,38 @@
 import { apiClient } from "./client";
 import { endpoints } from "./endpoints";
-import type { Configuration, Subscription } from "../types/api";
+import type { Configuration, Subscription, PointsSystem } from "../types/api";
 
 export async function getConfig(): Promise<Configuration | null> {
   const res = await apiClient.get(endpoints.GET_CONFIG);
   return (res.data?.configuration ?? res.data ?? null) as Configuration | null;
 }
 
-export async function getCurrentSubscription(): Promise<Subscription | null> {
+export interface SubscriptionResult {
+  pointsSystem: PointsSystem | null;
+  subscription: Subscription | null;
+}
+
+/**
+ * GET /pass/current-subscription returns a wrapper:
+ *   { points_system: "points"|"stamps", subscription: { status, ... } }
+ * The web reads points_system from the top level and the *inner* subscription
+ * object for status. We mirror that exactly.
+ */
+export async function getCurrentSubscription(): Promise<SubscriptionResult> {
   try {
     const res = await apiClient.get(endpoints.GET_CURRENT_SUBSCRIPTION);
-    return (res.data?.subscription ?? res.data ?? null) as Subscription | null;
+    const data = res.data ?? {};
+    return {
+      pointsSystem: (data.points_system ?? null) as PointsSystem | null,
+      subscription: (data.subscription ?? null) as Subscription | null,
+    };
   } catch {
-    return null;
+    return { pointsSystem: null, subscription: null };
   }
 }
 
-/** Treats a subscription as active unless it's explicitly inactive/canceled. */
+/** Matches the web SubscriptionGuard: active only when status is active/trialing. */
 export function isSubscriptionActive(sub: Subscription | null): boolean {
-  if (!sub) return false;
-  if (typeof sub.active === "boolean") return sub.active;
-  const status = (sub.status ?? "").toString().toLowerCase();
-  if (!status) return true; // unknown shape — don't hard-block the counter
-  return ["active", "trialing", "trial", "past_due"].includes(status);
+  const status = (sub?.status ?? "").toString().toLowerCase();
+  return status === "active" || status === "trialing";
 }

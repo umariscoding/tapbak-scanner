@@ -5,7 +5,8 @@ import { authStore } from "../auth/authStore";
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 12000,
-  headers: { "Content-Type": "application/json" },
+  // Matches the web client headers (Tapbak/src/states/apiClient.js).
+  headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "12331" },
 });
 
 // Attach the access token, plus the refresh token as a Cookie so the backend's

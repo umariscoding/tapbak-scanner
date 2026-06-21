@@ -8,7 +8,7 @@ import ScannerScreen from "../screens/ScannerScreen";
 import CustomerProcessScreen from "../screens/CustomerProcessScreen";
 import ManualLookupScreen from "../screens/ManualLookupScreen";
 import SettingsScreen from "../screens/SettingsScreen";
-import { colors } from "../theme";
+import { colors, fonts } from "../theme";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -27,40 +27,26 @@ export default function RootNavigator() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: colors.primary },
-        headerTintColor: "#fff",
-        headerTitleStyle: { fontWeight: "700" },
+        headerStyle: { backgroundColor: colors.surface },
+        headerShadowVisible: false,
+        headerTintColor: colors.primary,
+        headerTitleStyle: { fontFamily: fonts.display, fontSize: 18, color: colors.text },
+        contentStyle: { backgroundColor: colors.page },
       }}
     >
       {accessToken ? (
         <>
-          <Stack.Screen
-            name="Scanner"
-            component={ScannerScreen}
-            options={{ headerShown: false }}
-          />
+          <Stack.Screen name="Scanner" component={ScannerScreen} options={{ headerShown: false }} />
           <Stack.Screen
             name="CustomerProcess"
             component={CustomerProcessScreen}
-            options={{ title: "Customer" }}
+            options={{ title: "Process Transaction", headerBackTitle: "Scan" }}
           />
-          <Stack.Screen
-            name="ManualLookup"
-            component={ManualLookupScreen}
-            options={{ title: "Find Customer" }}
-          />
-          <Stack.Screen
-            name="Settings"
-            component={SettingsScreen}
-            options={{ title: "Settings" }}
-          />
+          <Stack.Screen name="ManualLookup" component={ManualLookupScreen} options={{ title: "Find Customer" }} />
+          <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: "Settings" }} />
         </>
       ) : (
-        <Stack.Screen
-          name="Login"
-          component={LoginScreen}
-          options={{ headerShown: false }}
-        />
+        <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
       )}
     </Stack.Navigator>
   );
